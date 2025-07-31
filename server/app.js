@@ -57,24 +57,12 @@ app.get("/hybrid", async (c) => {
   return c.html(`<html>
     <head>
       <script>
-        const loadRemaining = async () => {
-          const list = document.getElementById("list");
-          const items = await fetch("http://localhost:8000/items/remaining");
-          const json = await items.json();
-
-          document.getElementById("last")?.remove();
-
-          for (const item of json) {
-            const li = document.createElement("li");
-            li.textContent = item.name;
-            list.appendChild(li);
-          }
-        };
-
         document.addEventListener("DOMContentLoaded", () => {
           const observer = new IntersectionObserver((entries, obs) => {
             if (entries[0].isIntersecting) {
-              loadRemaining();
+              import("/public/loadRemaining.js").then((module) => {
+                module.loadRemaining();
+              });
               obs.disconnect();
             }
           });
