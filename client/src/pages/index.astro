@@ -1,23 +1,9 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import Hello from "../components/Hello.astro";
 ---
 
 <Layout>
-	<p>DAB!</p>
-	<button id="btn">Add item</button>
-	<ul id="list">
-	</ul>
-
-	<script>
-		const btn = document.getElementById('btn');
-		const list = document.getElementById('list');
-		let count = 1;
-
-		btn.addEventListener('click', async () => {
-			const li = document.createElement('li');
-			li.textContent = `Item ${count}`;
-			list.appendChild(li);
-			count++;
-		});
-	</script>
+	<p>Hello, Astro!</p>
+	<Hello greet={`property and ${3 + 5}`} />
 </Layout>

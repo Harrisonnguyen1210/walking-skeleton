@@ -1,0 +1,18 @@
+---
+export const getStaticPaths = () => {
+  return [
+    { params: { id: 1 } },
+    { params: { id: 2 } },
+    { params: { id: 3 } },
+    { params: { id: 4 } },
+  ];
+}
+
+import Layout from "../../layouts/Layout.astro";
+
+const id = Astro.params.id;
+---
+
+<Layout title="Items">
+  <p>Information about item id { id }!</p>
+</Layout>
