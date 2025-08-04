@@ -1,0 +1,29 @@
+---
+import { getCollection, render } from "astro:content";
+
+export const getStaticPaths = async () => {
+  const blogEntries = await getCollection("blog");
+
+  return blogEntries.map((entry) => ({
+    params: {
+      id: entry.id?.replace(".mdx", ""),
+    },
+    props: {
+      entry,
+    },
+  }));
+};
+
+const { Content } = await render(Astro.props.entry);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{Astro.props.entry.data.title}</title>
+  </head>
+  <body>
+    <Content />
+  </body>
+</html>
