@@ -1,0 +1,28 @@
+---
+import { getCollection, render } from "astro:content";
+import Comments from "../../components/Comments.svelte";
+import CommentStatistics from "../../components/CommentStatistics.svelte";
+
+export const getStaticPaths = async () => {
+  const recipes = await getCollection("recipes");
+
+  return recipes.map((entry) => ({
+    params: {
+      id: entry.id?.replace(".mdx", ""),
+    },
+    props: {
+      entry,
+    },
+  }));
+};
+
+const { Content } = await render(Astro.props.entry);
+---
+
+<h1>{Astro.props.entry.data.title}</h1>
+
+<CommentStatistics client:load />
+
+<Content />
+
+<Comments client:load />
