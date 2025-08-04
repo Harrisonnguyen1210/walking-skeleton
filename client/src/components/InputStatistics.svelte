@@ -18,7 +18,7 @@
 </script>
 
 <input type="number" bind:value={inputValue} />
-<button on:click={addNumber}>Add</button>
+<button onclick={addNumber}>Add</button>
 
 <ul>
     {#each numbers as num}
