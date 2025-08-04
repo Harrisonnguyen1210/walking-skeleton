@@ -12,11 +12,27 @@ const getItems = async () => {
   return items;
 };
 
+const getInitialItems = async () => {
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  return Array.from({ length: 100 }, (_, i) => ({ id: i, name: `Item ${i}` }));
+};
+const getRemainingItems = async () => {
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  return Array.from(
+    { length: 900 },
+    (_, i) => ({ id: i + 100, name: `Item ${i + 100}` }),
+  );
+};
+
 app.use("/public/*", serveStatic({ root: "." }));
 
 app.get("/items", async (c) => {
   const items = await getItems();
   return c.json(items);
+});
+
+app.get("/api", (c) => {
+  return c.text("Hello new path!");
 });
 
 app.get("/ssr", async (c) => {
@@ -32,19 +48,6 @@ app.get("/ssr", async (c) => {
     </body>
   </html>`);
 });
-
-const getInitialItems = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 20));
-  return Array.from({ length: 100 }, (_, i) => ({ id: i, name: `Item ${i}` }));
-};
-
-const getRemainingItems = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 20));
-  return Array.from(
-    { length: 900 },
-    (_, i) => ({ id: i + 100, name: `Item ${i + 100}` }),
-  );
-};
 
 app.get("/items/remaining", async (c) => {
   const items = await getRemainingItems();

@@ -13,7 +13,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.server-router.entrypoints=web"
-      - "traefik.http.routers.server-router.rule=PathPrefix(`/`)"
+      - "traefik.http.routers.server-router.rule=PathPrefix(`/api`)"
       - "traefik.http.services.server-service.loadbalancer.server.port=8000"
 
   client:
@@ -21,12 +21,13 @@ services:
     restart: unless-stopped
     volumes:
       - ./client:/app
-    ports:
-      - 4321:4321
     depends_on:
       - server
     labels:
-      - "traefik.enable=false"
+      - "traefik.enable=true"
+      - "traefik.http.routers.client-router.entrypoints=web"
+      - "traefik.http.routers.client-router.rule=PathPrefix(`/`)"
+      - "traefik.http.services.client-service.loadbalancer.server.port=4321"
 
   k6-tests:
     entrypoint: "/bin/true"
