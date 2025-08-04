@@ -1,6 +1,6 @@
-<!-- add something here-->
 <script>
-    import { commentState } from "../states/commentState.svelte.js";
+  import { useCommentState } from "../states/commentState.svelte.js";
+  const commentState = useCommentState();
 </script>
 
-<p>Total comments: {commentState.comments.length}</p>
+<p>Total comments: {commentState.count}</p>
