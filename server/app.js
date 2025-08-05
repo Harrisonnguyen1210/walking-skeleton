@@ -1,9 +1,13 @@
 import { Hono } from "@hono/hono";
 import { serveStatic } from "@hono/hono/deno";
 import { streamSSE } from "jsr:@hono/hono@4.6.5/streaming";
+import { upgradeWebSocket } from "@hono/hono/deno";
 
 const app = new Hono();
 const streams = new Set();
+const sockets = new Set();
+const socketsToNames = new Map();
+const channels = new Map();
 
 const getItems = async () => {
   await new Promise((resolve) => setTimeout(resolve, 20));
@@ -108,5 +112,100 @@ app.get("/api/stats/sse-active-users", (c) => {
     broadcastActiveUsers();
   });
 });
+
+app.get(
+  "/api/ws-chat",
+  upgradeWebSocket((c) => {
+    return {
+      onOpen: (event, ws) => {
+        sockets.add(ws);
+        socketsToNames.set(ws, `User ${Math.floor(1000 * Math.random())}`);
+      },
+      onMessage(event, ws) {
+        const name = socketsToNames.get(ws);
+        const message = JSON.parse(event.data);
+        message.date = Date.now();
+        message.message = `${name}: ${message.message}`;
+
+        for (const socket of sockets) {
+          socket.send(
+            JSON.stringify(message),
+          );
+        }
+      },
+      onClose: (event, ws) => {
+        sockets.delete(ws);
+        socketsToNames.delete(ws);
+        ws.close();
+      },
+      onError: (event, ws) => {
+        sockets.delete(ws);
+        socketsToNames.delete(ws);
+        ws.close();
+      },
+    };
+  }),
+);
+
+app.get(
+  "/api/chat",
+  upgradeWebSocket((c) => {
+    return {
+      onMessage(event, ws) {
+        try {
+          const data = JSON.parse(event.data);
+
+          // Handle subscribing to a channel
+          if (data.subscribe) {
+            const channelName = data.subscribe;
+
+            if (!channels.has(channelName)) {
+              channels.set(channelName, new Set());
+            }
+
+            // Add this WebSocket connection to the channel
+            channels.get(channelName).add(ws);
+            return;
+          }
+
+          // Handle sending messages to a channel
+          if (data.channel && data.message) {
+            const channelName = data.channel;
+            const message = data.message;
+
+            if (channels.has(channelName)) {
+              for (const socket of channels.get(channelName)) {
+                socket.send(
+                  JSON.stringify({
+                    channel: channelName,
+                    message,
+                  }),
+                );
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Invalid message format:", e);
+        }
+      },
+
+      onClose(event, ws) {
+        // Remove the closed WebSocket from all channels
+        for (const subs of channels.values()) {
+          subs.delete(ws);
+        }
+        ws.close();
+      },
+
+      onError(event, ws) {
+        // Cleanup on error
+        for (const subs of channels.values()) {
+          subs.delete(ws);
+        }
+        ws.close();
+      },
+    };
+  }),
+);
 
 export default app;
