@@ -1,7 +1,9 @@
 import { Hono } from "@hono/hono";
 import { serveStatic } from "@hono/hono/deno";
+import { streamSSE } from "jsr:@hono/hono@4.6.5/streaming";
 
 const app = new Hono();
+const streams = new Set();
 
 const getItems = async () => {
   await new Promise((resolve) => setTimeout(resolve, 20));
@@ -81,6 +83,30 @@ app.get("/hybrid", async (c) => {
       </ul>
     </body>
   </html>`);
+});
+
+const broadcastActiveUsers = () => {
+  const message = `Active users: ${streams.size}`;
+  for (const stream of streams) {
+    stream.writeSSE({
+      data: message,
+    });
+  }
+};
+
+app.get("/api/stats/sse-active-users", (c) => {
+  return streamSSE(c, async (stream) => {
+    streams.add(stream);
+
+    broadcastActiveUsers();
+
+    while (!stream.aborted && !stream.closed) {
+      await stream.sleep(1000);
+    }
+
+    streams.delete(stream);
+    broadcastActiveUsers();
+  });
 });
 
 export default app;
