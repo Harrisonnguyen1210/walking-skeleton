@@ -208,4 +208,9 @@ app.get(
   }),
 );
 
+app.get("/api/lgtm-test", (c) => {
+  console.log("Hello log collection :)");
+  return c.json({ message: "Hello, world!" });
+});
+
 export default app;

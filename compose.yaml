@@ -90,3 +90,9 @@ services:
       - database
     labels:
       - "traefik.enable=false"
+
+  lgtm:
+    image: grafana/otel-lgtm:0.8.6
+    ports:
+      - "3000:3000"
+      - "4318:4318"
