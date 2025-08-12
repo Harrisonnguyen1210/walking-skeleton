@@ -7,8 +7,9 @@ import { auth } from "./auth.js";
 const app = new Hono();
 const streams = new Set();
 const sockets = new Set();
-const socketsToNames = new Map();
 const channels = new Map();
+
+app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
 
 const getItems = async () => {
   await new Promise((resolve) => setTimeout(resolve, 20));
@@ -32,6 +33,26 @@ const getRemainingItems = async () => {
 };
 
 app.use("/public/*", serveStatic({ root: "." }));
+
+app.use("*", async (c, next) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session) {
+    return next();
+  }
+
+  c.set("user", session.user.name);
+  return next();
+});
+
+app.use("/api/ws-chat", (c, next) => {
+  const user = c.get("user");
+  if (!user) {
+    c.status(401);
+    return c.json({ message: "Unauthorized" });
+  }
+
+  return next();
+});
 
 app.get("/items", async (c) => {
   const items = await getItems();
@@ -117,16 +138,15 @@ app.get("/api/stats/sse-active-users", (c) => {
 app.get(
   "/api/ws-chat",
   upgradeWebSocket((c) => {
+    const user = c.get("user");
     return {
       onOpen: (event, ws) => {
         sockets.add(ws);
-        socketsToNames.set(ws, `User ${Math.floor(1000 * Math.random())}`);
       },
       onMessage(event, ws) {
-        const name = socketsToNames.get(ws);
         const message = JSON.parse(event.data);
         message.date = Date.now();
-        message.message = `${name}: ${message.message}`;
+        message.message = `${user}: ${message.message}`;
 
         for (const socket of sockets) {
           socket.send(
@@ -136,12 +156,10 @@ app.get(
       },
       onClose: (event, ws) => {
         sockets.delete(ws);
-        socketsToNames.delete(ws);
         ws.close();
       },
       onError: (event, ws) => {
         sockets.delete(ws);
-        socketsToNames.delete(ws);
         ws.close();
       },
     };
@@ -213,7 +231,5 @@ app.get("/api/lgtm-test", (c) => {
   console.log("Hello log collection :)");
   return c.json({ message: "Hello, world!" });
 });
-
-app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
 
 export default app;
