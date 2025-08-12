@@ -1,4 +1,6 @@
 <script>
+    import { useUserState } from "../states/userState.svelte.js";
+    let userState = useUserState();
     let message = $state("");
     let messages = $state([]);
     let connection = "";
@@ -33,18 +35,29 @@
         message = "";
     };
 
-    if (!import.meta.env.SSR) {
-        openConnection();
-    }
+    $effect(() => {
+        if (userState.email) {
+            openConnection();
+        }
+    });
 </script>
 
-<p>Chat!</p>
+{#if !userState.email}
+    <p>
+        Chatting is only for authenticated users. <a href="/auth/login">Login</a
+        >
+        or
+        <a href="/auth/register">Register</a>.
+    </p>
+{:else}
+    <p>Chat!</p>
 
-<input type="text" bind:value={message} />
-<button onclick={() => sendMessage()}>Send</button>
+    <input type="text" bind:value={message} />
+    <button onclick={() => sendMessage()}>Send</button>
 
-<ul>
-    {#each messages as message}
-        <li>{message.message}</li>
-    {/each}
-</ul>
+    <ul>
+        {#each messages as message}
+            <li>{message.message}</li>
+        {/each}
+    </ul>
+{/if}
