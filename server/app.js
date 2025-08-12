@@ -2,6 +2,7 @@ import { Hono } from "@hono/hono";
 import { serveStatic } from "@hono/hono/deno";
 import { streamSSE } from "jsr:@hono/hono@4.6.5/streaming";
 import { upgradeWebSocket } from "@hono/hono/deno";
+import { auth } from "./auth.js";
 
 const app = new Hono();
 const streams = new Set();
@@ -212,5 +213,7 @@ app.get("/api/lgtm-test", (c) => {
   console.log("Hello log collection :)");
   return c.json({ message: "Hello, world!" });
 });
+
+app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
 
 export default app;
