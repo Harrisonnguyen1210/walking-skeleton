@@ -36,11 +36,16 @@ app.use("/public/*", serveStatic({ root: "." }));
 
 app.use("*", async (c, next) => {
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
-  if (!session) {
-    return next();
-  }
+  if (session) c.set("user", session.user);
+  return next();
+});
 
-  c.set("user", session.user.name);
+app.use("/api/stats/sse-active-users", (c, next) => {
+  const user = c.get("user");
+  if (!user) {
+    c.status(401);
+    return c.json({ message: "Unauthorized" });
+  }
   return next();
 });
 
@@ -111,27 +116,25 @@ app.get("/hybrid", async (c) => {
   </html>`);
 });
 
-const broadcastActiveUsers = () => {
-  const message = `Active users: ${streams.size}`;
+const notifyActiveUsers = () => {
+  const users = streams.size;
+
   for (const stream of streams) {
-    stream.writeSSE({
-      data: message,
-    });
+    stream.writeSSE({ data: `Active users: ${users}` });
   }
 };
 
 app.get("/api/stats/sse-active-users", (c) => {
   return streamSSE(c, async (stream) => {
     streams.add(stream);
-
-    broadcastActiveUsers();
+    notifyActiveUsers();
 
     while (!stream.aborted && !stream.closed) {
       await stream.sleep(1000);
     }
 
     streams.delete(stream);
-    broadcastActiveUsers();
+    notifyActiveUsers();
   });
 });
 
@@ -140,10 +143,10 @@ app.get(
   upgradeWebSocket((c) => {
     const user = c.get("user");
     return {
-      onOpen: (event, ws) => {
+      onOpen: (_, ws) => {
         sockets.add(ws);
       },
-      onMessage(event, ws) {
+      onMessage(event, _) {
         const message = JSON.parse(event.data);
         message.date = Date.now();
         message.message = `${user}: ${message.message}`;
@@ -154,11 +157,11 @@ app.get(
           );
         }
       },
-      onClose: (event, ws) => {
+      onClose: (_, ws) => {
         sockets.delete(ws);
         ws.close();
       },
-      onError: (event, ws) => {
+      onError: (_, ws) => {
         sockets.delete(ws);
         ws.close();
       },
@@ -168,7 +171,7 @@ app.get(
 
 app.get(
   "/api/chat",
-  upgradeWebSocket((c) => {
+  upgradeWebSocket((_) => {
     return {
       onMessage(event, ws) {
         try {
@@ -208,7 +211,7 @@ app.get(
         }
       },
 
-      onClose(event, ws) {
+      onClose(_, ws) {
         // Remove the closed WebSocket from all channels
         for (const subs of channels.values()) {
           subs.delete(ws);
@@ -216,7 +219,7 @@ app.get(
         ws.close();
       },
 
-      onError(event, ws) {
+      onError(_, ws) {
         // Cleanup on error
         for (const subs of channels.values()) {
           subs.delete(ws);
